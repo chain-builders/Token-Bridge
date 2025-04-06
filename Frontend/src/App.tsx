@@ -1,34 +1,28 @@
-import {
-  RouterProvider,
-  createBrowserRouter,
-  createRoutesFromElements,
-  Route,
-} from "react-router-dom";
 import { WagmiProvider } from "wagmi";
 import "@rainbow-me/rainbowkit/styles.css";
+import { baseSepolia } from "wagmi/chains";
 import { getDefaultConfig, RainbowKitProvider } from "@rainbow-me/rainbowkit";
-import Home from "./page/TokenBridge";
-import {baseSepolia } from "wagmi/chains";
-
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ToastContainer} from 'react-toastify';
-
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import Home from "./page/TokenBridge";
 import "./App.css";
 
 function App() {
+  const config = getDefaultConfig({
+    appName: "MTK Token Bridge",
+    projectId: "YOUR_PROJECT_ID", // Replace with your actual project ID
+    chains: [baseSepolia],
+    ssr: false, // Set to true if using SSR
+  });
   
   const queryClient = new QueryClient();
-  const config = getDefaultConfig({
-    appName: "My RainbowKit App",
-    projectId: "YOUR_PROJECT_ID",
-    chains: [baseSepolia],
-  });
-
+  
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider>
-          <Home/>
+          <Home />
           <ToastContainer position="top-right" autoClose={3000} />
         </RainbowKitProvider>
       </QueryClientProvider>
