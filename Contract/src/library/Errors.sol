@@ -6,4 +6,6 @@ library Error {
     error InsufficientAmount();
     error InvalidTokenAddress();
     error TransferFailed();
+    error NotOwner();
+    error AlreadyProcessed();
 }
