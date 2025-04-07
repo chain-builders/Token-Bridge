@@ -104,6 +104,54 @@ function burnTokens(uint256 amount, string memory targetChain)
 - `Error.InvalidTokenAddress()`: Thrown when the token address is invalid.
 - `Error.InsufficientAmount()`: Thrown when the amount is zero.
 
-## License
+## Frontend features and framework
 
-This project is licensed under the UNLICENSED License.
+# React + TypeScript + Vite
+
+Setup to get React working in Vite 
+
+Currently, two official plugins are available:
+
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+
+
+### Instructions on How to Run the Frontend Framework
+
+1. **Install Dependencies**:
+   Ensure you have Node.js installed. Then, navigate to the `Frontend` directory and run:
+   ```bash
+   npm install
+   ```
+
+2. **Start the Development Server**:
+   To start the development server, run:
+   ```bash
+   npm run dev
+   ```
+
+3. **Build for Production**:
+   To build the project for production, run:
+   ```bash
+   npm run build
+   ```
+
+4. **Preview the Production Build**:
+   To preview the production build locally, run:
+   ```bash
+   npm run serve
+   ```
+
+5. **Linting**:
+   To run ESLint and check for linting issues, run:
+   ```bash
+   npm run lint
+   ```
+
+6. **Testing**:
+   (If applicable) To run tests, use:
+   ```bash
+   npm test
+   ```
+
+
