@@ -1,55 +1,29 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "./library/Events.sol";
+import "./BridgeBaseAbstract.sol";
 import "./library/Errors.sol";
-import "./interface/IBridgeToken.sol";
+import "./library/Events.sol";
+import "./tokens/Bbl.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-contract BridgePolygon is Ownable {
-    address public immutable baseTokenAddress;
-    address public immutable polygonTokenAddress;
-    
-    IBridgeToken public immutable baseToken;
-    IERC20 public immutable polygonToken;
-    
-    constructor(address _baseToken, address _polygonToken) Ownable(msg.sender) {
-        if (_baseToken == address(0) || _polygonToken == address(0))
-            revert Error.InvalidAddress();
-        
-        baseTokenAddress = _baseToken;
-        polygonTokenAddress = _polygonToken;
-        
-        baseToken = IBridgeToken(_baseToken);
-        polygonToken = IERC20(_polygonToken);
+contract BridgeBase is BridgeBaseAbstract, ReentrancyGuard {
+   BblToken public token;
+
+    constructor(address _token) {
+        if (_token == address(0)) Error.InvalidTokenAddress();        
+        token = BblToken(_token);
     }
-    
-    function transferBridge(
-        address from,
-        address to,
-        address _baseToken,
-        uint256 amount
-    ) external {
-        if (from == address(0) || to == address(0) || _baseToken == address(0))
-            revert Error.InvalidAddress();
-        if (amount <= 0) revert Error.InsufficientAmount();
-        if (_baseToken != baseTokenAddress) revert Error.InvalidTokenAddress();
-        
-        bool success = polygonToken.transferFrom(from, address(this), amount);
-        if (!success) revert Error.TransferFailed();
-        
-        baseToken.burn(address(this), amount);
-        
-        emit Event.Transfer(from, to, _baseToken, amount);
-        emit Event.Burn(amount);
+
+    function mintTokens(address to, uint256 amount, bytes32 sourceTx) external nonReentrant {
+        if (amount == 0) Error.InsufficientAmount();
+        token.mint(to, amount);       
+        emit Event.BridgeFinalized(to, amount, sourceTx);
     }
-    
-    function mint(uint256 amount) external onlyOwner {
-        if (amount == 0) revert Error.InsufficientAmount();
-        
-        baseToken.mint(address(this), amount);
-        
-        emit Event.Mint(amount);
+    function burnTokens(uint256 amount, string memory targetChain) external nonReentrant {
+        if (amount == 0) Error.InsufficientAmount();
+        token.burn(msg.sender, amount);
+        emit Event.BridgeInitiated(msg.sender, amount, targetChain, keccak256(abi.encodePacked(msg.sender, amount, block.timestamp)));
     }
+
 }

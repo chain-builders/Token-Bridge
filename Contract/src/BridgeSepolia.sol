@@ -8,11 +8,11 @@ import "./library/Events.sol";
 import "./tokens/Bbl.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-contract BridgeSepolia is BridgeBase, ReentrancyGuard {
-    Bbl public token;
+contract BridgeSepolia is BridgeBaseAbstract, ReentrancyGuard {
+    BblToken public token;
 
     constructor(address _token) {
-        token = Bbl(_token);
+        token = BblToken(_token);
     }
 
     function lockTokens(uint256 amount, string memory targetChain) external nonReentrant {
