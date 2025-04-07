@@ -1,187 +1,309 @@
-// pages/index.tsx
 import { useState } from "react";
-import { ArrowRight, Wallet, RefreshCcw, Info } from "lucide-react";
-import { useAccount } from "wagmi";
-import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { parseEther } from "ethers";
+import { useAccount, useReadContract, useWriteContract } from "wagmi";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { useConnectModal } from "@rainbow-me/rainbowkit";
+import { toast } from "react-toastify";
+import MyTokenAbi from "../abis/MyToken.json";
+import BridgeSepoliaAbi from "../abis/BridgeSepolia.json";
 
-export default function Home() {
-  const [fromToken, setFromToken] = useState("BASE");
-  const [toToken, setToToken] = useState("LINER");
-  const [amount, setAmount] = useState("");
+const TOKEN_ADDRESS = "0x7e86897eb6641096141A27923f6E00Df3D63F833";
+const BRIDGE_ADDRESS = "0x67E9F7E909a2B0e429af46D12c125e7fe8fF37A0";
 
-  const [isLoading, setIsLoading] = useState(false);
+function TokenBridge() {
+  // State variables for form inputs
+  const [mintAmount, setMintAmount] = useState("");
+  const [bridgeAmount, setBridgeAmount] = useState("");
+  const [transferAmount, setTransferAmount] = useState("");
+  const [recipient, setRecipient] = useState("");
+
+  // Wagmi hooks
   const { address, isConnected } = useAccount();
+  const { openConnectModal } = useConnectModal();
+  const { writeContractAsync, data: hash } = useWriteContract();
 
-  const swapTokens = () => {
-    setFromToken(toToken);
-    setToToken(fromToken);
+  
+  // Read token balance
+  const { data: tokenBalance } = useReadContract({
+    address: TOKEN_ADDRESS,
+    abi: MyTokenAbi.abi,
+    functionName: "balanceOf",
+    args: [address],
+  });
+  console.log("Token Balance:", tokenBalance);
+  // Mint tokens
+  const mintTokens = async () => {
+    if (!isConnected) {
+      openConnectModal?.();
+      return;
+    }
+
+    if (!mintAmount || isNaN(Number(mintAmount)) || Number(mintAmount) <= 0) {
+      toast.error("Please enter a valid amount to mint");
+      return;
+    }
+
+    try {
+      const txResponse = await writeContractAsync({
+        address: TOKEN_ADDRESS,
+        abi: MyTokenAbi.abi,
+        functionName: "mint",
+        args: [address, parseEther(mintAmount)],
+      });
+
+      toast.info("Minting tokens... Please wait");
+
+      if (!txResponse) {
+        throw new Error("Transaction failed to submit");
+      }
+      toast.success(`Successfully minted ${mintAmount} MTK tokens!`);
+      setMintAmount("");
+    } catch (error) {
+      const errorMessage =
+        (error as any)?.message?.split("(")[0] ||
+        (error as any)?.message ||
+        "Unknown error";
+      toast.error(`Error minting tokens: ${errorMessage}`);
+    }
   };
 
-  const handleBridge = () => {
-    if (!amount || parseFloat(amount) <= 0) {
-      toast.error("Please enter a valid amount");
-      return;
-    }
-
+  // Bridge tokens
+  const bridgeTokens = async () => {
     if (!isConnected) {
-      toast.error("Please connect your wallet first");
+      openConnectModal?.();
       return;
     }
 
-    setIsLoading(true);
-    toast.info("Initiating bridge transaction...");
+    if (
+      !bridgeAmount ||
+      isNaN(Number(bridgeAmount)) ||
+      Number(bridgeAmount) <= 0
+    ) {
+      toast.error("Please enter a valid amount to bridge");
+      return;
+    }
 
-    // Simulate transaction processing
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      // First approve tokens
+      const approvalTx = await writeContractAsync({
+        address: TOKEN_ADDRESS,
+        abi: MyTokenAbi.abi,
+        functionName: "approve",
+        args: [BRIDGE_ADDRESS, parseEther(bridgeAmount)],
+      });
+
+      toast.info("Approving tokens... Please wait");
+
+      if (!approvalTx) {
+        throw new Error("Transaction failed to submit");
+      }
+
+      // Then lock tokens for bridging
+      const bridgeTx = await writeContractAsync({
+        address: BRIDGE_ADDRESS,
+        abi: BridgeSepoliaAbi.abi,
+        functionName: "lockTokens",
+        args: [parseEther(bridgeAmount), "Mumbai"],
+      });
+
+      toast.info("Bridging tokens... Please wait");
+
+      if (!bridgeTx) {
+        throw new Error("Transaction failed to submit");
+      }
+
       toast.success(
-        `Successfully bridged ${amount} ${fromToken} to ${toToken}!`
+        `Successfully bridged ${bridgeAmount} MTK tokens to Mumbai!`
       );
-      setAmount("");
-    }, 3000);
+      setBridgeAmount("");
+    } catch (error) {
+      const errorMessage =
+        (error as any)?.message?.split("(")[0] ||
+        (error as any)?.message ||
+        "Unknown error";
+      toast.error(`Error bridging tokens: ${errorMessage}`);
+    }
+  };
+
+  // Transfer tokens
+  const transferTokens = async () => {
+    if (!isConnected) {
+      openConnectModal?.();
+      return;
+    }
+
+    if (
+      !transferAmount ||
+      isNaN(Number(transferAmount)) ||
+      Number(transferAmount) <= 0
+    ) {
+      toast.error("Please enter a valid amount to transfer");
+      return;
+    }
+
+    if (!recipient || !recipient.startsWith("0x")) {
+      toast.error("Please enter a valid recipient address");
+      return;
+    }
+
+    try {
+      const tx = await writeContractAsync({
+        address: TOKEN_ADDRESS,
+        abi: MyTokenAbi.abi,
+        functionName: "transfer",
+        args: [recipient, parseEther(transferAmount)],
+      });
+
+      toast.info("Transferring tokens... Please wait");
+
+      if (!tx) {
+        throw new Error("Transaction failed to submit");
+      }
+
+      toast.success(
+        `Successfully transferred ${transferAmount} MTK tokens to ${recipient}!`
+      );
+      setTransferAmount("");
+      setRecipient("");
+    } catch (error) {
+      const errorMessage =
+        (error as any)?.message?.split("(")[0] ||
+        (error as any)?.message ||
+        "Unknown error";
+      toast.error(`Error transferring tokens: ${errorMessage}`);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-center p-4">
-      <ToastContainer
-        position="top-right"
-        autoClose={5000}
-        hideProgressBar={false}
-      />
-
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">Token Bridge</h1>
-          <p className="text-gray-500 mt-2">
-            Seamlessly bridge your tokens between networks
-          </p>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-          <div className="bg-gradient-to-r  mb-4 from-blue-500 to-purple-600 text-white  py-3 rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all shadow-lg ml-5 ">
+    <div className="container mx-auto p-8 max-w-3xl">
+      
+      <div className="mb-8">
+        <div className="flex flex-col md:flex-row items-center justify-between p-6 bg-gradient-to-r from-blue-500 via-indigo-600 to-purple-700 rounded-xl shadow-lg">
+          <div className="mb-4 md:mb-0">
+            <h1 className="text-3xl font-bold text-white">MTK Token Bridge</h1>
+            <p className="text-blue-100 mt-1">Seamlessly bridge tokens between networks</p>
+          </div>
+          
+          <div className="flex flex-col items-center md:items-end">
             <ConnectButton.Custom>
               {({ account, openAccountModal, openConnectModal, mounted }) => {
                 const connected = mounted && account;
-
+                
                 return (
                   <div>
                     {connected ? (
-                      <button onClick={openAccountModal} className=" w-full">
-                        <span className="text-white w-full font-medium">
-                          {account.displayName}
-                        </span>
+                      <button
+                        onClick={openAccountModal}
+                         className="bg-white text-indigo-700 px-6 py-2.5  mt-6 rounded-lg hover:bg-opacity-90 transition-all duration-300 font-medium flex items-center space-x-2"
+                      >
+                        <span>{account.displayName}</span>
                       </button>
                     ) : (
-                      <button onClick={openConnectModal} className=" flex flex-row justify-center w-full">
-                        <span className="text-white font-medium mr-2">
-                          Connect Wallet
-
-                        </span>
-                        <Wallet/>
+                      <button
+                        onClick={openConnectModal}
+                        className="bg-white text-indigo-700 px-6 py-2.5 rounded-lg hover:bg-opacity-90 transition-all duration-300 font-medium flex items-center space-x-2"
+                      >
+                        <span>Connect Wallet</span>
                       </button>
                     )}
                   </div>
                 );
               }}
             </ConnectButton.Custom>
-          </div>
-
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              From
-            </label>
-            <div className="relative">
-              <select
-                value={fromToken}
-                onChange={(e) => setFromToken(e.target.value)}
-                className="block w-full bg-gray-50 border border-gray-200 rounded-lg py-3 px-4 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="BASE">BASE</option>
-                <option value="LINER">LINER</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="flex justify-center my-4">
-            <button
-              onClick={swapTokens}
-              className="bg-gray-100 p-2 rounded-full hover:bg-gray-200 transition duration-200"
-            >
-              <ArrowRight className="h-5 w-5 text-gray-500 transform rotate-90" />
-            </button>
-          </div>
-
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              To
-            </label>
-            <div className="relative">
-              <select
-                value={toToken}
-                onChange={(e) => setToToken(e.target.value)}
-                className="block w-full bg-gray-50 border border-gray-200 rounded-lg py-3 px-4 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="BASE">BASE</option>
-                <option value="LINER">LINER</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Amount
-            </label>
-            <div className="relative">
-              <input
-                type="number"
-                placeholder="0.0"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                className="block w-full bg-gray-50 border border-gray-200 rounded-lg py-3 px-4 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-              <button
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 text-blue-600 text-sm font-medium"
-                onClick={() => setAmount("0.1")}
-              >
-                MAX
-              </button>
-            </div>
-          </div>
-
-          <div className="flex items-center mb-6 p-3 bg-blue-50 rounded-lg">
-            <Info className="h-5 w-5 text-blue-500 mr-2" />
-            <p className="text-sm text-blue-700">
-              Bridge fee: 0.1% • Est. time: ~15 minutes
-            </p>
-          </div>
-
-          <button
-            onClick={handleBridge}
-            disabled={isLoading}
-            className="w-full flex items-center justify-center bg-blue-600 text-white rounded-lg py-3 px-4 font-medium hover:bg-blue-700 transition duration-200 disabled:opacity-70"
-          >
-            {isLoading ? (
-              <>
-                <RefreshCcw className="animate-spin h-5 w-5 mr-2" />
-                Processing...
-              </>
-            ) : (
-              "Bridge Tokens"
+            
+            {isConnected && (
+              <div className="mt-3 bg-white bg-opacity-10 backdrop-blur-md px-4 py-2 rounded-lg transition-all duration-500 opacity-100 transform translate-y-0' : 'opacity-0 transform -translate-y-2">
+                <div className="flex items-center space-x-2">
+                  <div className="h-2.5 w-2.5 rounded-full bg-green-400 animate-pulse"></div>
+                  <p className="text-white text-sm">
+                    {tokenBalance 
+                      ? `${(Number(tokenBalance) / 10**18).toFixed(4)} MTK`
+                      : "Loading balance..."}
+                  </p>
+                </div>
+              </div>
             )}
-          </button>
-        </div>
-
-        <div className="mt-6 text-center text-sm text-gray-500">
-          <p>
-            Need help?{" "}
-            <a href="#" className="text-blue-600 hover:underline">
-              Contact support
-            </a>
-          </p>
+          </div>
         </div>
       </div>
+
+
+      <>
+          
+
+          <div className="grid gap-6">
+            {/* Mint Section */}
+            <div className="bg-white p-6 rounded-lg shadow">
+              <h2 className="text-xl font-semibold mb-4">Mint Tokens</h2>
+              <div className="flex flex-col md:flex-row gap-4">
+                <input
+                  type="number"
+                  placeholder="Amount to mint"
+                  value={mintAmount}
+                  onChange={e => setMintAmount(e.target.value)}
+                  className="flex-1 p-2 border rounded"
+                />
+                <button 
+                  onClick={mintTokens}
+                  className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 transition-colors"
+                >
+                  Mint Tokens
+                </button>
+              </div>
+            </div>
+
+            {/* Bridge Section */}
+            <div className="bg-white p-6 rounded-lg shadow">
+              <h2 className="text-xl font-semibold mb-4">Bridge to Mumbai</h2>
+              <div className="flex flex-col md:flex-row gap-4">
+                <input
+                  type="number"
+                  placeholder="Amount to bridge"
+                  value={bridgeAmount}
+                  onChange={e => setBridgeAmount(e.target.value)}
+                  className="flex-1 p-2 border rounded"
+                />
+                <button 
+                  onClick={bridgeTokens}
+                  className="bg-purple-600 text-white px-6 py-2 rounded hover:bg-purple-700 transition-colors"
+                >
+                  Bridge Tokens
+                </button>
+              </div>
+            </div>
+
+            {/* Transfer Section */}
+            <div className="bg-white p-6 rounded-lg shadow">
+              <h2 className="text-xl font-semibold mb-4">Transfer Tokens</h2>
+              <div className="flex flex-col gap-4">
+                <input
+                  type="text"
+                  placeholder="Recipient address (0x...)"
+                  value={recipient}
+                  onChange={e => setRecipient(e.target.value)}
+                  className="w-full p-2 border rounded"
+                />
+                <div className="flex flex-col md:flex-row gap-4">
+                  <input
+                    type="number"
+                    placeholder="Amount to transfer"
+                    value={transferAmount}
+                    onChange={e => setTransferAmount(e.target.value)}
+                    className="flex-1 p-2 border rounded"
+                  />
+                  <button 
+                    onClick={transferTokens}
+                    className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition-colors"
+                  >
+                    Transfer Tokens
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
     </div>
   );
 }
+
+export default TokenBridge;
