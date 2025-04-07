@@ -8,21 +8,21 @@ import "./tokens/Bbl.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 contract BridgeBase is BridgeBaseAbstract, ReentrancyGuard {
-   BblToken public token;
+   Bbl public token;
 
     constructor(address _token) {
-        if (_token == address(0)) Error.InvalidTokenAddress();        
-        token = BblToken(_token);
+        if (_token == address(0)) revert Error.InvalidTokenAddress();        
+        token = Bbl(_token);
     }
 
     function mintTokens(address to, uint256 amount, bytes32 sourceTx) external nonReentrant {
-        if (amount == 0) Error.InsufficientAmount();
+        if (amount == 0) revert Error.InsufficientAmount();
         token.mint(to, amount);       
         emit Event.BridgeFinalized(to, amount, sourceTx);
     }
     function burnTokens(uint256 amount, string memory targetChain) external nonReentrant {
-        if (amount == 0) Error.InsufficientAmount();
-        token.burn(msg.sender, amount);
+        if (amount == 0) revert Error.InsufficientAmount();
+        token.burnFromBridge(msg.sender, amount);
         emit Event.BridgeInitiated(msg.sender, amount, targetChain, keccak256(abi.encodePacked(msg.sender, amount, block.timestamp)));
     }
 

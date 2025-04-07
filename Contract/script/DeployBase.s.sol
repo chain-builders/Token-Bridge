@@ -6,12 +6,12 @@ import "forge-std/Script.sol";
 import "../src/tokens/Bbl.sol";
 import "../src/BridgeBase.sol";
 
-contract DeployMumbai is Script {
+contract DeployBase is Script {
     function run() external {
         vm.startBroadcast();
 
-        Bbl token = new Bbl();
-        console.log(" Wrapped Bbl (Mumbai) deployed at:", address(token));
+        Bbl token = new Bbl("WrappedBigBroToken", "WBBT");
+        console.log(" Wrapped Bbl (Base) deployed at:", address(token));
 
         BridgeBase bridge = new BridgeBase(address(token));
         console.log(" BridgeBase deployed at:", address(bridge));

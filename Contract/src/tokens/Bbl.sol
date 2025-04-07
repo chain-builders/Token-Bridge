@@ -20,5 +20,8 @@ contract Bbl is ERC20Burnable, AccessControl {
         _burn(from, amount);
     }
 
+    function getBalance(address account) external view returns (uint256) {
+        return balanceOf(account);
+    }
     
 }

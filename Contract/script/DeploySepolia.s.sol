@@ -10,7 +10,7 @@ contract DeploySepolia is Script {
     function run() external {
         vm.startBroadcast();
 
-        Bbl token = new Bbl();
+        Bbl token = new Bbl("BigBroToken", "BBT");
         console.log(" Bbl (Sepolia) deployed at:", address(token));
 
         BridgeSepolia bridge = new BridgeSepolia(address(token));
