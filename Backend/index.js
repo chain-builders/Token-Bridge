@@ -9,9 +9,9 @@ const walletSepolia = new ethers.Wallet(process.env.PRIVATE_KEY, providerSepolia
 const walletMumbai = new ethers.Wallet(process.env.PRIVATE_KEY, providerMumbai);
 
 const bridgeSepoliaAbi = require('./abis/BridgeSepolia.json').abi;
-const bridgeMumbaiAbi = require('./abis/BridgeMumbai.json').abi;
+const bridgeMumbaiAbi = require('./abis/BridgeBase.json').abi;
 const bridgeSepolia = new ethers.Contract(process.env.BRIDGE_SEPOLIA, bridgeSepoliaAbi, walletSepolia);
-const bridgeMumbai = new ethers.Contract(process.env.BRIDGE_MUMBAI, bridgeMumbaiAbi, walletMumbai);
+const bridgeMumbai = new ethers.Contract(process.env.BRIDGE_BASE, bridgeMumbaiAbi, walletMumbai);
 
 bridgeSepolia.on('BridgeInitiated', async (user, amount, targetChain, txHash) => {
   try {
