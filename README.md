@@ -22,7 +22,7 @@ Token-Bridge is a Solidity smart contract that facilitates token bridging betwee
 ### 1. Clone the Repository
 
 ```sh
-git clone https://github.com/yourusername/bridgebase.git
+git clone https://github.com/chain-builders/Token-Bridge.git
 cd bridgebase
 ```
 
