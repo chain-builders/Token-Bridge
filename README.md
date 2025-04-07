@@ -153,5 +153,52 @@ Currently, two official plugins are available:
    ```bash
    npm test
    ```
+# Token-Bridge Backend
+
+This is the backend description for the Token-Bridge project, which facilitates bridging tokens between  Sepolia and Mumbai Ethereum test networks. The backend is implemented using Node.js and the ethers.js library to interact with the Ethereum blockchain.
+
+## Installation
+
+To get started with the backend, follow these steps:
+
+1. Clone the repository:
+    ```bash
+    git clone https://github.com/chain-builders/Token-Bridge.git
+    cd Token-Bridge/Backend
+    ```
+
+2. Install the dependencies:
+    ```bash
+    npm install
+    ```
+
+## Configuration
+
+Create a `.env` file in the `Backend` directory and add the following environment variables:
+
+```env
+SEPOLIA_RPC=<Your Sepolia RPC URL>
+MUMBAI_RPC=<Your Mumbai RPC URL>
+PRIVATE_KEY=<Your Wallet Private Key>
+BRIDGE_SEPOLIA=<Bridge Contract Address on Sepolia>
+BRIDGE_BASE=<Bridge Contract Address on Mumbai>
+```
+
+Replace the placeholders with your actual values.
+
+## Usage
+
+To start the backend, run the following command:
+
+```bash
+node index.js
+```
+
+The backend will listen to events from the bridge contracts on both Sepolia and Mumbai test networks and handle token bridging between the two networks.
+
+## Project Structure
+
+- `index.js`: Main file that sets up the event listeners for the bridge contracts.
+- `abis/`: Directory containing the ABI files for the bridge contracts.
 
 
