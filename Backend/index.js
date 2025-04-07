@@ -14,10 +14,14 @@ const bridgeSepolia = new ethers.Contract(process.env.BRIDGE_SEPOLIA, bridgeSepo
 const bridgeMumbai = new ethers.Contract(process.env.BRIDGE_MUMBAI, bridgeMumbaiAbi, walletMumbai);
 
 bridgeSepolia.on('BridgeInitiated', async (user, amount, targetChain, txHash) => {
-  console.log(`Sepolia event: ${user}, ${amount}, ${targetChain}, ${txHash}`);
-  const tx = await bridgeMumbai.mintTokens(user, amount, txHash);
-  await tx.wait();
-  console.log('Minted tokens on Mumbai:', tx.hash);
+  try {
+    console.log(`Sepolia event: ${user}, ${amount}, ${targetChain}, ${txHash}`);
+    const tx = await bridgeMumbai.mintTokens(user, amount, txHash);
+    await tx.wait();
+    console.log('Minted tokens on Mumbai:', tx.hash);
+  } catch (error) {
+    console.error('Error minting tokens on Mumbai:', error);
+  }
 });
 
 bridgeMumbai.on('BridgeInitiated', async (user, amount, targetChain, txHash) => {
