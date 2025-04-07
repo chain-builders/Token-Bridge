@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
-contract MyToken is ERC20Burnable, AccessControl {
+contract Bbl is ERC20Burnable, AccessControl {
     bytes32 public constant BRIDGE_ROLE = keccak256("BRIDGE_ROLE");
 
     constructor(string memory name, string memory symbol) ERC20(name, symbol) {
@@ -20,5 +20,8 @@ contract MyToken is ERC20Burnable, AccessControl {
         _burn(from, amount);
     }
 
+    function getBalance(address account) external view returns (uint256) {
+        return balanceOf(account);
+    }
     
 }
