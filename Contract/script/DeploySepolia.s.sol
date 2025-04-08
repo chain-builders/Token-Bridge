@@ -1,4 +1,3 @@
-// script/DeploySepolia.s.sol
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
@@ -11,13 +10,14 @@ contract DeploySepolia is Script {
         vm.startBroadcast();
 
         Bbl token = new Bbl("BigBroToken", "BBT");
-        console.log(" Bbl (Sepolia) deployed at:", address(token));
+        console.log("Bbl (Sepolia) deployed at:", address(token));
 
-        BridgeSepolia bridge = new BridgeSepolia(address(token));
-        console.log(" BridgeSepolia deployed at:", address(bridge));
+        uint256 conversionRate = 1e18; 
+        BridgeSepolia bridge = new BridgeSepolia(address(token), conversionRate);
+        console.log("BridgeSepolia deployed at:", address(bridge));
 
         token.grantRole(token.BRIDGE_ROLE(), address(bridge));
-        console.log(" Granted BRIDGE_ROLE to BridgeSepolia:", address(bridge));
+        console.log("Granted BRIDGE_ROLE to BridgeSepolia:", address(bridge));
 
         vm.stopBroadcast();
     }

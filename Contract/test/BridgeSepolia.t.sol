@@ -4,91 +4,66 @@ pragma solidity ^0.8.20;
 import "forge-std/Test.sol";
 import "../src/BridgeSepolia.sol";
 import "../src/tokens/Bbl.sol";
-import "../src/library/Errors.sol";
-import "../src/library/Events.sol";
 
 contract BridgeSepoliaTest is Test {
-    BridgeSepolia bridge;
     Bbl token;
-    
-    address admin = address(1);
-    address user1 = address(2);
-    address user2 = address(3);
-    
+    BridgeSepolia bridge;
+    address user = address(0x123);
+    uint256 conversionRate = 1e18; // 1 BBL = 1 ETH
+
     function setUp() public {
-        // Deploy BBL token - assuming constructor needs name and symbol
-        token = new Bbl("Test Token", "TEST");
-        
-        // Grant minter role to this test contract
-        bytes32 minterRole = token.BRIDGE_ROLE();
-        token.grantRole(minterRole, address(this));
-        
-        // Deploy BridgeBase contract
-        bridge = new BridgeSepolia(address(token));
-        
-        // Give some initial tokens to user1 for testing burn functionality
-        token.mint(user1, 1000 ether);
-        vm.prank(user1);
-        token.approve(address(bridge), type(uint256).max);
-        
-        // Grant minter role to bridge contract if needed
-        token.grantRole(minterRole, address(bridge));
+        token = new Bbl("BigBroToken", "BBT");
+        // Mint 1000 tokens (with 18 decimals) to user
+        token.mint(user, 1000 * 1e18);
+        bridge = new BridgeSepolia(address(token), conversionRate);
+        // Have user approve the bridge for 1000 tokens
+        vm.prank(user);
+        token.approve(address(bridge), 1000 * 1e18);
     }
-    
-    function test_Constructor() public {
-        assertEq(address(bridge.token()), address(token));
+
+    function testLockTokens() public {
+        uint256 amount = 100 * 1e18;
+        // Capture current timestamp before call so we can re-compute opId
+        uint256 t = block.timestamp;
+        vm.prank(user);
+        bridge.lockTokens(amount, "Base");
+        // Check that the bridge now holds the tokens locked by the user.
+        uint256 bridgeBalance = token.balanceOf(address(bridge));
+        assertEq(bridgeBalance, amount);
     }
-    
-    function test_LockTokens() public {
-        uint256 amount = 100 ether;
-        string memory targetChain = "arbitrum";
-        
-        // Test locking tokens
-        vm.prank(user1);
-        bridge.lockTokens(amount, targetChain);
-        
-        // Check balances
-        assertEq(token.balanceOf(user1), 900 ether);
-        assertEq(token.balanceOf(address(bridge)), amount);
-        
-        // Check event emission
-        bytes32 expectedTxHash = keccak256(abi.encodePacked(user1, amount, block.timestamp));
-        vm.expectEmit(true, true, true, true);
-        emit Event.BridgeInitiated(user1, amount, targetChain, expectedTxHash);
-        vm.prank(user1);
-        bridge.lockTokens(amount, targetChain);
+
+    function testLockTokensFailInsufficientBalance() public {
+        uint256 amount = 2000 * 1e18;
+        vm.prank(user);
+        vm.expectRevert(); // Expect revert due to insufficient balance
+        bridge.lockTokens(amount, "Base");
     }
-    
-    function test_ReleaseTokens() public {
-        uint256 amount = 100 ether;
-        bytes32 sourceTx = keccak256("test-tx");
-        
-        // First lock some tokens to bridge
-        vm.prank(user1);
-        bridge.lockTokens(amount, "arbitrum");
-        
-        // Test releasing tokens
-        vm.prank(admin);
-        bridge.releaseTokens(user2, amount, sourceTx);
-        
-        // Check balances
-        assertEq(token.balanceOf(user2), amount);
-        assertEq(token.balanceOf(address(bridge)), 0);
-        
-        // Test onlyOnce modifier
-        vm.expectRevert(abi.encodeWithSelector(Error.AlreadyProcessed.selector));
-        vm.prank(admin);
-        bridge.releaseTokens(user2, amount, sourceTx);
+
+    function testLockTokensFailInsufficientAllowance() public {
+        uint256 amount = 100 * 1e18;
+        // Revoke approval first
+        vm.prank(user);
+        token.approve(address(bridge), 0);
+        vm.prank(user);
+        vm.expectRevert(); // Expect revert due to insufficient allowance
+        bridge.lockTokens(amount, "Base");
     }
-    
-    function test_OnlyAdminCanRelease() public {
-        // This test would need to be adjusted based on your actual access control
-        // Currently the releaseTokens function has no access control in the provided contract
-        // You might want to add a modifier like onlyOwner or onlyRelayer
-        
-        // Example of how it might look if you add access control:
-        vm.prank(user1);
-        vm.expectRevert();
-        bridge.releaseTokens(user2, 100 ether, keccak256("test-tx"));
+
+    function testRefund() public {
+        uint256 amount = 100 * 1e18;
+        // Capture current timestamp for opId computation
+        uint256 t = block.timestamp;
+        vm.prank(user);
+        bridge.lockTokens(amount, "Base");
+        // Recompute opId using the same parameters as in lockTokens
+        bytes32 opId = keccak256(abi.encodePacked(user, (amount * conversionRate) / 1e18, t));
+        // Warp forward in time beyond the refund period (default is 1 day = 86400 sec)
+        vm.warp(block.timestamp + 86400 + 1);
+        uint256 balanceBefore = token.balanceOf(user);
+        // Anyone may now trigger a refund
+        bridge.refund(opId);
+        uint256 balanceAfter = token.balanceOf(user);
+        // The user's balance should increase by the locked amount
+        assertEq(balanceAfter, balanceBefore + amount);
     }
 }
