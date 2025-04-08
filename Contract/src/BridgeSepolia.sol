@@ -1,4 +1,3 @@
-
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
@@ -7,39 +6,62 @@ import "./library/Errors.sol";
 import "./library/Events.sol";
 import "./tokens/Bbl.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import "./interfaces/IUniswapV2Pair.sol";   
 
 contract BridgeSepolia is BridgeBaseAbstract, ReentrancyGuard {
-    Fabs public token;
-    IUniswapV2Pair public ammPool;
-    address public stablecoin; // 
- 
-    constructor(address _token, address _ammPool, address _stablecoin) {
-        token = Fabs(_token);
-        ammPool = IUniswapV2Pair(_ammPool);
-        stablecoin = _stablecoin;
+    struct BridgeOperation {
+        address user;
+        uint256 amount;
+        uint40 timestamp;
+        bool finalized;
+    }
+    mapping(bytes32 => BridgeOperation) public bridgeOperations;
+    uint256 public constant refundTime = 1 days;
+    Bbl public immutable token;
+    uint256 public conversionRate;
+
+    constructor(address _token, uint256 _conversionRate) {
+        if (_token == address(0)) revert Error.InvalidTokenAddress();
+        token = Bbl(_token);
+        conversionRate = _conversionRate;
     }
 
-    // uint256 destinationAmount = (sourceAmount * 250) / 100; 
-
-    function getTokenPrice() public view returns (uint256) {
-        (uint112 reserve0, uint112 reserve1,) = ammPool.getReserves();
-        uint256 tokenPrice = (uint256(reserve0) * 1e18) / uint256(reserve1);
-        return tokenPrice;
-    } 
-    function getDestinationAmount(uint256 sourceAmount) public view returns (uint256) {
-        uint256 tokenPrice = getTokenPrice();
-        uint256 destinationAmount = (sourceAmount * tokenPrice) / 1e18;
-        return destinationAmount;
+    function setConversionRate(uint256 _conversionRate) external {
+        conversionRate = _conversionRate;
     }
 
-    function lockTokens(uint256 amount, string memory targetChain) external nonReentrant {
+    function lockTokens(uint256 amount, string calldata targetChain) external nonReentrant {
+        if (amount == 0) revert Error.InsufficientAmount();
+        if (token.balanceOf(msg.sender) < amount) revert Error.InsufficientBalance();
+        if (token.allowance(msg.sender, address(this)) < amount) revert Error.InsufficientAllowance();
         token.transferFrom(msg.sender, address(this), amount);
-        emit Event.BridgeInitiated(msg.sender, destinationAmount, targetChain, keccak256(abi.encodePacked(msg.sender, destinationAmount, block.timestamp)));
+        uint256 destAmount = (amount * conversionRate) / 1e18;
+        bytes32 opId = keccak256(abi.encodePacked(msg.sender, destAmount, block.timestamp));
+        bridgeOperations[opId] = BridgeOperation({
+            user: msg.sender,
+            amount: amount,
+            timestamp: uint40(block.timestamp),
+            finalized: false
+        });
+        emit Event.BridgeInitiated(msg.sender, destAmount, targetChain, opId);
     }
 
     function releaseTokens(address to, uint256 amount, bytes32 sourceTx) external onlyOnce(sourceTx) {
+        if (to == address(0)) revert Error.InvalidRecipient();
+        if (amount == 0) revert Error.InsufficientAmount();
+        BridgeOperation storage op = bridgeOperations[sourceTx];
+        if (op.finalized) revert Error.AlreadyFinalized();
+        op.finalized = true;
         token.transfer(to, amount);
         emit Event.BridgeFinalized(to, amount, sourceTx);
+    }
+
+    // NOTE: Modified refund to allow anyone (e.g. a relayer) to trigger refund after the refund period.
+    function refund(bytes32 opId) external nonReentrant {
+        BridgeOperation storage op = bridgeOperations[opId];
+        if (block.timestamp < op.timestamp + refundTime) revert Error.RefundTooEarly();
+        if (op.finalized) revert Error.AlreadyFinalized();
+        op.finalized = true;
+        token.transfer(op.user, op.amount);
+        emit Event.Refund(op.user, op.amount, opId);
     }
 }

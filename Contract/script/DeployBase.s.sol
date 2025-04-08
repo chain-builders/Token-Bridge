@@ -1,4 +1,3 @@
-// script/DeployMumbai.s.sol
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
@@ -11,13 +10,14 @@ contract DeployBase is Script {
         vm.startBroadcast();
 
         Bbl token = new Bbl("WrappedBigBroToken", "WBBT");
-        console.log(" Wrapped Bbl (Base) deployed at:", address(token));
+        console.log("Wrapped Bbl (Base) deployed at:", address(token));
 
-        BridgeBase bridge = new BridgeBase(address(token));
-        console.log(" BridgeBase deployed at:", address(bridge));
+        uint256 conversionRate = 0.7e18; // 0.7 BBL = 1 ETH
+        BridgeBase bridge = new BridgeBase(address(token), conversionRate);
+        console.log("BridgeBase deployed at:", address(bridge));
 
         token.grantRole(token.BRIDGE_ROLE(), address(bridge));
-        console.log(" Granted BRIDGE_ROLE to BridgeBase:", address(bridge));
+        console.log("Granted BRIDGE_ROLE to BridgeBase:", address(bridge));
 
         vm.stopBroadcast();
     }

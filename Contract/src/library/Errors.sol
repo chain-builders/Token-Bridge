@@ -1,11 +1,14 @@
-// SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.13;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
 
 library Error {
-    error InvalidAddress();
-    error InsufficientAmount();
     error InvalidTokenAddress();
-    error TransferFailed();
-    error NotOwner();
+    error InsufficientAmount();
+    error InsufficientBalance();
+    error InsufficientAllowance();
+    error InvalidRecipient();
+    error AlreadyFinalized();
+    error NotAuthorized();
+    error RefundTooEarly();
     error AlreadyProcessed();
 }
