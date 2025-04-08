@@ -1,6 +1,6 @@
 import { WagmiProvider } from "wagmi";
 import "@rainbow-me/rainbowkit/styles.css";
-import { baseSepolia } from "wagmi/chains";
+import { baseSepolia, sepolia } from "wagmi/chains";
 import { getDefaultConfig, RainbowKitProvider } from "@rainbow-me/rainbowkit";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ToastContainer } from "react-toastify";
@@ -12,7 +12,7 @@ function App() {
   const config = getDefaultConfig({
     appName: "MTK Token Bridge",
     projectId: "YOUR_PROJECT_ID", // Replace with your actual project ID
-    chains: [baseSepolia],
+    chains: [sepolia],
     ssr: false, // Set to true if using SSR
   });
   
