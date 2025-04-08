@@ -38,6 +38,7 @@ export default function Home() {
 
   const handleBridge = async () => {
     if (!isConnected) return;
+    
 
     if (Number(amount) <= 0) {
       toast.error("Please enter a valid amount to bridge");
@@ -117,14 +118,14 @@ export default function Home() {
       setIsLoading(false);
     }
   };
-  
+
   const { data: tokenBalance } = useReadContract({
     address: CONTRACT_ADDRESSES[fromToken].TOKEN as `0x${string}`,
     abi: MyTokenAbi.abi,
     functionName: "balanceOf",
     args: [address],
   });
-  console.log("Token Balance:", tokenBalance);
+  console.log("Token Balance:", tokenBalance)
 
   return (
     <div className="min-h-screen bg-white flex flex-col items-center justify-center p-4">
