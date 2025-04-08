@@ -1,7 +1,7 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
-
-import "v2-core/interfaces/IUniswapV2Factory.sol";
-import "v2-core/interfaces/IUniswapV2Pair.sol";
+import "lib/v2-core/contracts/interfaces/IUniswapV2Factory.sol";
+import "lib/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 
 contract PoolCreator {
     address public immutable UNISWAP_FACTORY;
@@ -11,7 +11,7 @@ contract PoolCreator {
     }
     
     function createPool(address tokenA, address tokenB) external returns (address poolAddress) {
-        // Sort tokens (Uniswap requirement)
+
         (address token0, address token1) = tokenA < tokenB 
             ? (tokenA, tokenB) 
             : (tokenB, tokenA);
