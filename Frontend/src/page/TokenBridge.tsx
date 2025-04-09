@@ -18,16 +18,17 @@ export default function Home() {
   const [amount, setAmount] = useState("");
   const { writeContractAsync, data: hash } = useWriteContract();
   const [isLoading, setIsLoading] = useState(false);
+  const [isSwapping, setIsSwapping] = useState(false);
   const { address, isConnected } = useAccount();
 
   const CONTRACT_ADDRESSES = {
     BASE: {
-      TOKEN: "0xc0b0d50b6b15B0E9A6fF53fA80AA406B10432271",
-      BRIDGE: "0xac7f8CcF7973BdB40E07E5E49e97B6cCad17ef26",
+      TOKEN: "0x1af4787a576c5Ed326066e2BF255b3b7AA0c1C54",
+      BRIDGE: "0x860f6255203F68c7b6Ff8897ef303049d060490B",
     },
     SEPOLIA: {
-      TOKEN: "0x35DdD28c68D86643dD3982a065e593F63252D218", 
-      BRIDGE: "0xAbBf70A16433b3Fbc0611dE0a26fF9Fd927cD339",
+      TOKEN: "0xb2C7250112B889697CE48F5543A340baBB970C64",
+      BRIDGE: "0x9596103F936E7Aa648bc031D6B39300eB6d7a2c9",
     },
   };
 
@@ -35,10 +36,8 @@ export default function Home() {
     setFromToken(toToken);
     setToToken(fromToken);
   };
-
   const handleBridge = async () => {
     if (!isConnected) return;
-    
 
     if (Number(amount) <= 0) {
       toast.error("Please enter a valid amount to bridge");
@@ -47,12 +46,12 @@ export default function Home() {
 
     try {
       setIsLoading(true);
+      setIsSwapping(true);
 
-      // Get the correct addresses based on the fromToken
       const tokenAddress = CONTRACT_ADDRESSES[fromToken].TOKEN;
       const bridgeAddress = CONTRACT_ADDRESSES[fromToken].BRIDGE;
 
-      // Approve tokens first
+      
       toast.info("Approving tokens... Please wait", {
         autoClose: false,
         toastId: "approving",
@@ -74,7 +73,6 @@ export default function Home() {
         toastId: "bridging",
       });
 
-    
       let bridgeFunctionName;
       let destinationChain;
       let abi;
@@ -93,7 +91,7 @@ export default function Home() {
 
       const bridgeTx = await writeContractAsync({
         address: bridgeAddress as `0x${string}`,
-        abi, 
+        abi,
         functionName: bridgeFunctionName,
         args: [parseEther(amount), destinationChain],
       });
@@ -101,8 +99,15 @@ export default function Home() {
       if (!bridgeTx) {
         throw new Error("Transaction failed to submit");
       }
+
       toast.dismiss("bridging");
-      toast.success(`Successfully bridged ${amount} BBL tokens to ${toToken}!`);
+
+      toast.success(
+        `Successfully bridged ${amount} BBL tokens to ${toToken}!`,
+        {
+          autoClose: 3000, // Close after 3 seconds
+        }
+      );
       setAmount("");
     } catch (error) {
       toast.dismiss("approving");
@@ -112,10 +117,14 @@ export default function Home() {
           (error as any).message?.split("(")[0] ||
           (error as any).message ||
           "Unknown error"
-        }`
+        }`,
+        {
+          autoClose: 3000, // Also make error messages close after 3 seconds
+        }
       );
     } finally {
       setIsLoading(false);
+      setIsSwapping(false);
     }
   };
 
@@ -125,7 +134,6 @@ export default function Home() {
     functionName: "balanceOf",
     args: [address],
   });
-  console.log("Token Balance:", tokenBalance)
 
   return (
     <div className="min-h-screen bg-white flex flex-col items-center justify-center p-4">
@@ -224,9 +232,14 @@ export default function Home() {
           <div className="flex justify-center my-4">
             <button
               onClick={swapTokens}
+              disabled={isSwapping}
               className="bg-gray-100 p-2 rounded-full hover:bg-gray-200 transition duration-200"
             >
-              <ArrowRight className="h-5 w-5 text-gray-500 transform rotate-90" />
+              {isSwapping ? (
+                <RefreshCcw className="h-5 w-5 text-blue-500 animate-spin" />
+              ) : (
+                <ArrowRight className="h-5 w-5 text-gray-500 transform rotate-90" />
+              )}
             </button>
           </div>
 
