@@ -70,7 +70,7 @@ function test_BurnFromBridge() public {
 
     // Test others cannot burn
     vm.prank(bridge);
-    token.mint(user1, amount); // Reset balance
+    token.mint(user1, amount); 
 
     vm.expectRevert(
         abi.encodeWithSelector(

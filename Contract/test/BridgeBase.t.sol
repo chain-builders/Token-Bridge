@@ -9,7 +9,7 @@ contract BridgeBaseTest is Test {
     Bbl token;
     BridgeBase bridge;
     address user = address(0x456);
-    uint256 conversionRate = 0.7e18; // 0.7 BBL = 1 ETH
+    uint256 conversionRate = 0.7e18;
 
     function setUp() public {
         token = new Bbl("WrappedBigBroToken", "WBBT");
