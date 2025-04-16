@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // pages/index.tsx
 import { useState } from "react";
 import { ArrowRight, Wallet, RefreshCcw, Info } from "lucide-react";
@@ -23,12 +24,12 @@ export default function Home() {
 
   const CONTRACT_ADDRESSES = {
     BASE: {
-      TOKEN: "0x1af4787a576c5Ed326066e2BF255b3b7AA0c1C54",
-      BRIDGE: "0x860f6255203F68c7b6Ff8897ef303049d060490B",
+      TOKEN: "0x499CC847E8E21Bc89C0A1b831A496284b14208bf",
+      BRIDGE: "0xd3Eb72Fd8C39935D6Cd9F64b839378ED8eD30d2d",
     },
     SEPOLIA: {
-      TOKEN: "0xb2C7250112B889697CE48F5543A340baBB970C64",
-      BRIDGE: "0x9596103F936E7Aa648bc031D6B39300eB6d7a2c9",
+      TOKEN: "0x9d1C2361b25b1dE15c87E9B18221ddA00d073C05",
+      BRIDGE: "0x7779E17a45Bc550865514F0894Dc174152A4aA28",
     },
   };
 
@@ -89,39 +90,34 @@ export default function Home() {
         throw new Error("Unsupported token bridge path");
       }
 
-      const bridgeTx = await writeContractAsync({
+      await writeContractAsync({
         address: bridgeAddress as `0x${string}`,
         abi,
         functionName: bridgeFunctionName,
         args: [parseEther(amount), destinationChain],
-      });
-
-      if (!bridgeTx) {
-        throw new Error("Transaction failed to submit");
-      }
-
-      toast.dismiss("bridging");
-
-      toast.success(
-        `Successfully bridged ${amount} BBL tokens to ${toToken}!`,
-        {
-          autoClose: 3000, // Close after 3 seconds
+      }, {
+        onError: (error) => {
+          toast.dismiss('bridging')
+          console.log(error.message)
+          toast.error(error.message)
+        },
+        onSuccess: () => {
+          toast.dismiss("bridging");
+          toast.success(
+            `Successfully bridged ${amount} BBL tokens to ${toToken}!`,
+            {
+              autoClose: 3000, // Close after 3 seconds
+            }
+          );
         }
+    }
       );
+
+
+    
       setAmount("");
-    } catch (error) {
-      toast.dismiss("approving");
-      toast.dismiss("bridging");
-      toast.error(
-        `Error bridging tokens: ${
-          (error as any).message?.split("(")[0] ||
-          (error as any).message ||
-          "Unknown error"
-        }`,
-        {
-          autoClose: 3000, // Also make error messages close after 3 seconds
-        }
-      );
+    } catch (error) { 
+      console.log(error)
     } finally {
       setIsLoading(false);
       setIsSwapping(false);

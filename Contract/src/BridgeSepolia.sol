@@ -55,7 +55,7 @@ contract BridgeSepolia is BridgeBaseAbstract, ReentrancyGuard {
         emit Event.BridgeFinalized(to, amount, sourceTx);
     }
 
-    // NOTE: Modified refund to allow anyone (e.g. a relayer) to trigger refund after the refund period.
+
     function refund(bytes32 opId) external nonReentrant {
         BridgeOperation storage op = bridgeOperations[opId];
         if (block.timestamp < op.timestamp + refundTime) revert Error.RefundTooEarly();
